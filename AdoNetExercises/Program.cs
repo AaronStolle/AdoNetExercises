@@ -18,7 +18,61 @@ namespace AdoNetExercises
             // DisplaySectionCount(1);
             // DMLQueries();
             //TransactionExample();
+            /*Console.Write("Enter SectionID: ");
+            var sectionID = int.Parse(Console.ReadLine());
+            GetRoster(sectionID);*/
+            var s = new Subject();
+            InsertSubject(s);
+        }
 
+        static DALResponse InsertSubject(Subject s)
+        {
+            var response = new DALResponse();
+
+            using (var connection = new SqlConnection(connection_string))
+            {
+                Console.Write("Enter the new subject new: ");
+                var subjectName = Console.ReadLine();
+                                
+                try
+                {
+                    connection.Open();
+                    var checkSQL = "SELECT * from Subject WHERE SubjectName = @subjectName;";
+
+                    var checkCommand = new SqlCommand(checkSQL, connection);
+                    checkCommand.Parameters.AddWithValue("@subjectName", subjectName);
+
+                    using (var reader = checkCommand.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            response.Success = false;
+                            response.Message = $"Subject {subjectName} already exists";
+                        }
+                        if(!reader.Read())
+                        {
+                            
+                            var insertSubjectSQL = @"INSERT into Subject(SubjectName) VALUES (@subjectName);" + "SELECT SCOPE_IDENTITY()";
+
+                            var insertSubjectCommand = new SqlCommand(insertSubjectSQL, connection);
+                            insertSubjectCommand.Parameters.AddWithValue("@subjectName", subjectName);
+
+                            reader.Close();
+
+                            int SubjectID = Convert.ToInt32(insertSubjectCommand.ExecuteScalar());
+
+                            response.Success = true;
+                            response.Message = $"Subject {SubjectID} created";
+                        }                                
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                }
+                Console.WriteLine(response.Message);
+                return response;
+            }
         }
 
         static void GenerateGUID()
@@ -292,6 +346,90 @@ namespace AdoNetExercises
             }
         }
 
+        static SectionRosterView GetRoster(int sectionID)
+        {                        
+            var roster = new SectionRosterView();
 
+            roster.rosterItems = new List<RosterItem>();
+
+            using(var connection = new SqlConnection(connection_string))
+            {
+                var sql1 = @"SELECT s.SectionID,
+c.CourseName, sem.StartDate, sem.EndDate, t.LastName + ', ' + t.FirstName Teacher from Section s 
+join Course c on s.CourseID = c.CourseID
+join Semester sem on s.SemesterID = sem.SemesterID
+join Teacher t on s.TeacherID = t.TeacherID
+where s.SectionID = @sectionID";
+
+                var sql2 = @"SELECT st.StudentID,
+st.LastName + ', ' + st.FirstName Student,
+sr.CurrentGrade Grade from Student st 
+JOIN SectionRoster sr on st.StudentID = sr.StudentID
+JOIN Section s on sr.SectionID = s.SectionID
+where s.SectionID = @sectionID
+order by s.SectionID, st.LastName";
+
+                var command1 = new SqlCommand(sql1, connection);
+                command1.Parameters.AddWithValue("@sectionID", sectionID);
+
+                var command2 = new SqlCommand(sql2, connection);
+                command2.Parameters.AddWithValue("@sectionID", sectionID);
+
+
+                try
+                {
+                    connection.Open();
+
+                    using (var reader = command1.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            
+                            roster.SectionID = (int)reader["SectionID"];
+                            roster.CourseName = reader["CourseName"].ToString();
+                            roster.StartDate = (DateTime)reader["StartDate"];
+                            roster.EndDate = (DateTime)reader["EndDate"];
+                            roster.TeacherName = reader["Teacher"].ToString();
+                        }
+                    }
+
+                    Console.WriteLine(@$"SectionID: {roster.SectionID}
+Course: {roster.CourseName}
+Start Date: {roster.StartDate}
+End Date: {roster.EndDate}
+Teacher: {roster.TeacherName}
+ID    Name            Grade");
+                    using (var reader = command2.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            var row = new RosterItem();
+                            row.StudentId = (int)reader["StudentID"];
+                            row.StudentName = reader["Student"].ToString();
+                            
+                            if(reader["Grade"] == DBNull.Value)
+                            {
+                                row.StudentGrade = "N/A";
+                            }
+                            else
+                            {
+                                row.StudentGrade = reader["Grade"].ToString();
+                            }
+                            roster.rosterItems.Add(row);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                }
+
+                foreach (var r in roster.rosterItems)
+                {
+                    Console.WriteLine($"{r.StudentId,-2} {r.StudentName, 3} {r.StudentGrade, 10}");
+                }
+                return roster;
+            }
+        }
     }
 }
