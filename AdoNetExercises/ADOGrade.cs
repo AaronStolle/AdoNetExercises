@@ -6,13 +6,12 @@ using System.Threading.Tasks;
 
 namespace AdoNetExercises
 {
-    public class Grade
+    public class ADOGrade
     {
         public int GradeID { get; set; }
-        public decimal Score { get; set; }
-        public int GradeItemID { get; set; }
-        public GradeItem GradeItem { get; set; }
         public int SectionRosterID { get; set; }
-        public SectionRoster SectionRoster { get; set; }
+        public int StudentID { get; set; }
+        // decimal that accepts nulls
+        public decimal? Score { get; set; }
     }
 }

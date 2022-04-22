@@ -1,6 +1,10 @@
-﻿using System;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.EntityFrameworkCore;
+using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
+using System.IO;
+using System.Linq;
 
 namespace AdoNetExercises
 {
@@ -21,8 +25,26 @@ namespace AdoNetExercises
             /*Console.Write("Enter SectionID: ");
             var sectionID = int.Parse(Console.ReadLine());
             GetRoster(sectionID);*/
-            var s = new Subject();
-            InsertSubject(s);
+            /*var s = new Subject();
+            InsertSubject(s);*/
+            AddTeacher();
+        }
+
+        private static void AddTeacher()
+        {
+            using(var db = AppDbContext.GetDbContext())
+            {
+                var teacher = new Teacher()
+                {
+                    FirstName = "Aaron",
+                    LastName = "Stolle"
+                };
+                var existingTeachers = db.Teacher.Where(t => t.LastName == teacher.LastName).ToList();
+
+                db.Teacher.Add(teacher);
+                db.SaveChanges();
+                Console.WriteLine($"New Teacher added and has ID of {teacher.TeacherID}");
+            }         
         }
 
         static DALResponse InsertSubject(Subject s)
@@ -431,5 +453,6 @@ ID    Name            Grade");
                 return roster;
             }
         }
+        
     }
 }
